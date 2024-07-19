@@ -13,6 +13,9 @@ export const NxCloudChoices = [
 ];
 
 const messageOptions: Record<string, MessageData[]> = {
+  /**
+   * These messages are for setting up CI as part of create-nx-workspace and nx init
+   */
   setupCI: [
     {
       code: 'which-ci-provider',
@@ -27,41 +30,28 @@ const messageOptions: Record<string, MessageData[]> = {
         { value: 'skip', name: '\nDo it later' },
       ],
       footer:
-        '\nRemote caching, task distribution, and test splitting are provided by Nx Cloud. Read more at https://nx.dev/ci',
-      fallback: { value: 'skip', key: 'setupNxCloud' },
-    },
-    {
-      code: 'set-up-ci',
-      message: `Set up CI with caching, distribution and test deflaking`,
-      initial: 0,
-      choices: [
-        { value: 'github', name: 'GitHub Actions' },
-        { value: 'circleci', name: 'CircleCI' },
-        { value: 'gitlab', name: 'Gitlab' },
-        { value: 'azure', name: 'Azure DevOps' },
-        {
-          value: 'bitbucket-pipelines',
-          name: 'BitBucket Pipelines',
-        },
-        { value: 'skip', name: '\nDo it later' },
-      ],
-      footer:
-        '\nRemote caching, task distribution, and test splitting are provided by Nx Cloud. Read more at https://nx.dev/ci',
+        '\nRemote caching, task distribution and test splitting are provided by Nx Cloud. Read more at https://nx.dev/ci',
       fallback: { value: 'skip', key: 'setupNxCloud' },
     },
   ],
+  /**
+   * These messages are a fallback for setting up CI as well as when migrating major versions
+   */
   setupNxCloud: [
     {
-      code: 'enable-caching',
+      code: 'enable-caching2',
       message: `Would you like remote caching to make your build faster?`,
       initial: 0,
       choices: [
         { value: 'yes', name: 'Yes' },
-        { value: 'skip', name: 'Skip for now' },
+        {
+          value: 'skip',
+          name: 'No - I would not like remote caching',
+        },
       ],
       footer:
         '\nRead more about remote caching at https://nx.dev/ci/features/remote-cache',
-      hint: `\n(it's free and can be disabled any time)`,
+      hint: `\n(can be disabled any time)`,
       fallback: undefined,
     },
   ],
