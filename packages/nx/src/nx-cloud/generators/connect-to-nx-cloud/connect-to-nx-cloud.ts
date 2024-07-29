@@ -46,7 +46,7 @@ function getNxInitDate(): string | null {
   }
 }
 
-async function createNxCloudWorkspace(
+async function createNxCloudWorkspaceV1(
   workspaceName: string,
   installationSource: string,
   nxInitDate: string | null
@@ -54,6 +54,28 @@ async function createNxCloudWorkspace(
   const apiUrl = getCloudUrl();
   const response = await require('axios').post(
     `${apiUrl}/nx-cloud/create-org-and-workspace`,
+    {
+      workspaceName,
+      installationSource,
+      nxInitDate,
+    }
+  );
+
+  if (response.data.message) {
+    throw new Error(response.data.message);
+  }
+
+  return response.data;
+}
+
+async function createNxCloudWorkspaceV2(
+  workspaceName: string,
+  installationSource: string,
+  nxInitDate: string | null
+): Promise<{ nxCloudId: string; url: string }> {
+  const apiUrl = getCloudUrl();
+  const response = await require('axios').post(
+    `${apiUrl}/nx-cloud/v2/create-org-and-workspace`,
     {
       workspaceName,
       installationSource,
@@ -134,7 +156,7 @@ interface ConnectToNxCloudOptions {
   directory?: string;
 }
 
-function addNxCloudOptionsToNxJson(
+function addNxCloudAccessTokenToNxJson(
   tree: Tree,
   nxJson: NxJsonConfiguration,
   token: string
@@ -143,6 +165,22 @@ function addNxCloudOptionsToNxJson(
     extends: 'nx/presets/npm.json',
   };
   nxJson.nxCloudAccessToken = token;
+  const overrideUrl = process.env.NX_CLOUD_API || process.env.NRWL_API;
+  if (overrideUrl) {
+    (nxJson as any).nxCloudUrl = overrideUrl;
+  }
+  updateNxJson(tree, nxJson);
+}
+
+function addNxCloudIdToNxJson(
+  tree: Tree,
+  nxJson: NxJsonConfiguration,
+  nxCloudId: string
+) {
+  nxJson ??= {
+    extends: 'nx/presets/npm.json',
+  };
+  nxJson.nxCloudId = nxCloudId;
   const overrideUrl = process.env.NX_CLOUD_API || process.env.NRWL_API;
   if (overrideUrl) {
     (nxJson as any).nxCloudUrl = overrideUrl;
@@ -167,27 +205,52 @@ export async function connectToNxCloud(
   } else {
     const usesGithub = await repoUsesGithub(schema.github);
 
-    let responseFromCreateNxCloudWorkspace:
+    let responseFromCreateNxCloudWorkspaceV1:
       | {
           token: string;
           url: string;
         }
       | undefined;
 
+    let responseFromCreateNxCloudWorkspaceV2:
+      | {
+          nxCloudId: string;
+          url: string;
+        }
+      | undefined;
+
+    let nxCloudToken: string;
+
     // do NOT create Nx Cloud token (createNxCloudWorkspace)
     // if user is using github and is running nx-connect
     if (!(usesGithub && schema.installationSource === 'nx-connect')) {
-      responseFromCreateNxCloudWorkspace = await createNxCloudWorkspace(
-        getRootPackageName(tree),
-        schema.installationSource,
-        getNxInitDate()
-      );
+      if (process.env.NX_ENABLE_LOGIN === 'true') {
+        responseFromCreateNxCloudWorkspaceV2 = await createNxCloudWorkspaceV2(
+          getRootPackageName(tree),
+          schema.installationSource,
+          getNxInitDate()
+        );
 
-      addNxCloudOptionsToNxJson(
-        tree,
-        nxJson,
-        responseFromCreateNxCloudWorkspace?.token
-      );
+        addNxCloudIdToNxJson(
+          tree,
+          nxJson,
+          responseFromCreateNxCloudWorkspaceV2?.nxCloudId
+        );
+        nxCloudToken = responseFromCreateNxCloudWorkspaceV2.nxCloudId;
+      } else {
+        responseFromCreateNxCloudWorkspaceV1 = await createNxCloudWorkspaceV1(
+          getRootPackageName(tree),
+          schema.installationSource,
+          getNxInitDate()
+        );
+
+        addNxCloudAccessTokenToNxJson(
+          tree,
+          nxJson,
+          responseFromCreateNxCloudWorkspaceV1?.token
+        );
+        nxCloudToken = responseFromCreateNxCloudWorkspaceV1.token;
+      }
 
       await formatChangedFilesWithPrettierIfAvailable(tree, {
         silent: schema.hideFormatLogs,
@@ -195,7 +258,7 @@ export async function connectToNxCloud(
     }
     return async () =>
       await printSuccessMessage(
-        responseFromCreateNxCloudWorkspace?.token,
+        nxCloudToken,
         schema.installationSource,
         usesGithub
       );
