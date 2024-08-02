@@ -87,11 +87,13 @@ export async function repoUsesGithub(
 
 function getSource(
   installationSource: string
-): 'nx-init' | 'nx-connect' | 'create-nx-workspace' | 'other' {
+): 'nx-init' | 'nx-connect' | 'nx-console' | 'create-nx-workspace' | 'other' {
   if (installationSource.includes('nx-init')) {
     return 'nx-init';
   } else if (installationSource.includes('nx-connect')) {
     return 'nx-connect';
+  } else if (installationSource.includes('nx-console')) {
+    return 'nx-console';
   } else if (installationSource.includes('create-nx-workspace')) {
     return 'create-nx-workspace';
   } else {

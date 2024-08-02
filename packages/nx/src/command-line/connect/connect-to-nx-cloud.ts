@@ -55,6 +55,10 @@ export async function connectToNxCloudCommand(
 ): Promise<boolean> {
   const nxJson = readNxJson();
 
+  const installationSource = process.env.NX_CONSOLE
+    ? 'nx-console'
+    : 'nx-connect';
+
   if (isNxCloudUsed(nxJson)) {
     const token =
       process.env.NX_CLOUD_ACCESS_TOKEN || nxJson.nxCloudAccessToken;
@@ -63,7 +67,7 @@ export async function connectToNxCloudCommand(
         `Unable to authenticate. Either define accessToken in nx.json or set the NX_CLOUD_ACCESS_TOKEN env variable.`
       );
     }
-    const connectCloudUrl = await shortenedCloudUrl('nx-connect', token);
+    const connectCloudUrl = await shortenedCloudUrl(installationSource, token);
     output.log({
       title: '✔ This workspace already has Nx Cloud set up',
       bodyLines: [
@@ -79,7 +83,7 @@ export async function connectToNxCloudCommand(
 
   const tree = new FsTree(workspaceRoot, false, 'connect-to-nx-cloud');
   const callback = await connectToNxCloud(tree, {
-    installationSource: command ?? 'nx-connect',
+    installationSource: command ?? installationSource,
   });
   tree.lock();
   flushChanges(workspaceRoot, tree.listChanges());

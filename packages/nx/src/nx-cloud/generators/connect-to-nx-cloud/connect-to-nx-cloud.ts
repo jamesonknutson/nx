@@ -79,7 +79,11 @@ async function printSuccessMessage(
     usesGithub
   );
 
-  if (installationSource === 'nx-connect' && usesGithub) {
+  if (
+    (installationSource === 'nx-connect' ||
+      installationSource === 'nx-console') &&
+    usesGithub
+  ) {
     try {
       const cloudConnectSpinner = ora(
         `Opening Nx Cloud ${connectCloudUrl} in your browser to connect your workspace.`
@@ -176,7 +180,13 @@ export async function connectToNxCloud(
 
     // do NOT create Nx Cloud token (createNxCloudWorkspace)
     // if user is using github and is running nx-connect
-    if (!(usesGithub && schema.installationSource === 'nx-connect')) {
+    if (
+      !(
+        usesGithub &&
+        (schema.installationSource === 'nx-connect' ||
+          schema.installationSource === 'nx-console')
+      )
+    ) {
       responseFromCreateNxCloudWorkspace = await createNxCloudWorkspace(
         getRootPackageName(tree),
         schema.installationSource,
